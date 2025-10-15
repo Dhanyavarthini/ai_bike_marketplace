@@ -1,0 +1,31 @@
+import { BikeFilters } from "./_components/bike-filters";
+import { getBikeFilters } from "@/actions/bike-listing";
+import { BikeListings } from "./_components/bikes-listing";
+
+export const metadata = {
+  title: "Bikes | BikeBay",
+  description: "Browse and search for your dream bike",
+};
+
+export default async function BikesPage() {
+  // Fetch filters data on the server
+  const filtersData = await getBikeFilters();
+
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <h1 className="text-6xl mb-4 gradient-title">Browse Bikes</h1>
+
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Filters Section */}
+        <div className="w-full lg:w-80 flex-shrink-0">
+          <BikeFilters filters={filtersData.data} />
+        </div>
+
+        {/* Bike Listings */}
+        <div className="flex-1">
+          <BikeListings />
+        </div>
+      </div>
+    </div>
+  );
+}
