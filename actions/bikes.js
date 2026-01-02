@@ -47,11 +47,17 @@ export async function processBikeImageWithAI(file) {
       3. Year (approximately)
       4. Color
       5. Category (Cruiser, Street, Sport, etc.)
-      6. Mileage
+      6. Mileage (return value in kmpl)
       7. Fuel type (your best guess)
       8. Transmission type (your best guess)
-      9. Price (your best guess)
+      9. Price (your best guess) — return the price VALUE in Indian Rupees (INR) only.
       10. Short Description as to be added to a bike listing
+
+      IMPORTANT:
+      - Always return the price value in INR. Do NOT include any other currency.
+      - Format the price field as a numeric value (integer or decimal) without currency symbols/commas, e.g. 15000 or 15000.50.
+      - Also include a "confidence" value between 0 and 1 representing overall confidence.
+      - Only respond with the JSON object, nothing else.
 
       Format your response as a clean JSON object with these fields:
       {
