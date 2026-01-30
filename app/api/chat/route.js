@@ -88,7 +88,74 @@ export async function POST(request) {
 
     // Send the message with context and get response
     const result = await chat.sendMessage(contextualMessage);
-    const responseText = result.response.text();
+    let responseText = result.response.text();
+
+    // Sanitize assistant text to avoid Markdown/HTML formatting (e.g., **bold**), showing plain text only
+    function sanitizeAssistantText(text) {
+      if (!text) return text;
+      // Remove HTML tags
+      let t = text.replace(/<[^>]*>/g, "");
+      // Remove fenced code blocks
+      t = t.replace(/```[\s\S]*?```/g, "");
+      // Remove inline code backticks
+      t = t.replace(/`([^`]*)`/g, "$1");
+      // Remove bold/italic markers **text**, __text__, *text*, _text_
+      t = t.replace(/\*\*(.*?)\*\*/gs, "$1");
+      t = t.replace(/__(.*?)__/gs, "$1");
+      t = t.replace(/\*(.*?)\*/gs, "$1");
+      t = t.replace(/_(.*?)_/gs, "$1");
+      // Collapse multiple blank lines
+      t = t.replace(/\n{3,}/g, "\n\n");
+      return t.trim();
+    }
+
+    responseText = sanitizeAssistantText(responseText);
+
+    // Post-process the assistant message to add listing / booking links when appropriate.
+    // We do NOT auto-book; we only point the user to the listing and booking pages.
+    try {
+      const lastText = (lastMessage.parts[0].text || "").toLowerCase();
+
+      function findMentionedBike(bikes, text) {
+        if (!bikes) return null;
+        for (const b of bikes) {
+          const full = `${b.make} ${b.model}`.toLowerCase();
+          const model = (b.model || "").toLowerCase();
+          const make = (b.make || "").toLowerCase();
+          if (text.includes(full) || text.includes(model) || text.includes(make)) {
+            return b;
+          }
+        }
+        return null;
+      }
+
+      const matchedBike = findMentionedBike(bikesContext, lastText);
+      let appended = "";
+
+      if (matchedBike) {
+        const bikeLink = `/bikes/${matchedBike.id}`;
+        const bookingLink = `/test-drive/${matchedBike.id}`;
+
+        if (/(book|test drive|test-drive)/.test(lastText)) {
+          appended = `\n\nYes! Test drives are available. Click below to select a date and time.\n🔗 Book Test Drive: ${bookingLink}\n🔗 View Bike Listing: ${bikeLink}`;
+        } else if (/(i like|i love|like|love|what should i do|what should i|what now|next)/.test(lastText)) {
+          appended = `\n\nGreat choice! You can view full details and book a test drive here:\n🔗 View Bike Listing: ${bikeLink}\n🔗 Book Test Drive: ${bookingLink}`;
+        }
+      } else {
+        if (/(book|test drive|test-drive)/.test(lastText)) {
+          appended = `\n\nYes! Test drives are available. Tell me which bike you want to book for, or visit:\n🔗 Book Test Drive: /test-drive`;
+        }
+      }
+
+      if (appended) {
+        responseText = `${responseText}${appended}`;
+      }
+    } catch (e) {
+      console.warn("Post-processing chat response error:", e.message);
+    }
+
+    // Ensure final response is sanitized again in case appended content contains formatting
+    responseText = sanitizeAssistantText(responseText);
 
     return Response.json({
       role: "assistant",

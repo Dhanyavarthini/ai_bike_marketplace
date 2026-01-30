@@ -34,6 +34,58 @@ export function Chatbot() {
     }
   }, [isOpen]);
 
+  // Render message content: parse markdown links [label](url) and convert URLs/paths into clickable anchors
+  const renderMessageContent = (content) => {
+    if (!content) return null;
+
+    const elements = [];
+    let lastIndex = 0;
+
+    // Regex to find markdown links like [Label](/bikes/123) or [Label](https://...)
+    const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+|\/[^)]+)\)/g;
+    let match;
+
+    while ((match = mdLinkRegex.exec(content)) !== null) {
+      // Text before the match
+      if (match.index > lastIndex) {
+        elements.push(content.substring(lastIndex, match.index));
+      }
+
+      const label = match[1];
+      const url = match[2];
+
+      elements.push(
+        <a key={`md-${match.index}`} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+          {label}
+        </a>
+      );
+
+      lastIndex = mdLinkRegex.lastIndex;
+    }
+
+    // Remaining text after last markdown link
+    const remaining = content.substring(lastIndex);
+
+    // Split remaining by plain URLs or relative paths and convert them to anchors
+    // Single-line regex to avoid unterminated regexp issues
+    const parts = remaining.split(/(https?:\/\/[^\s]+|\/[^\s]+)/g);
+    parts.forEach((part, idx) => {
+      if (!part) return;
+      if (/^https?:\/\//.test(part) || /^\//.test(part)) {
+        elements.push(
+          <a key={`url-${idx}-${lastIndex}`} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+            {part}
+          </a>
+        );
+      } else {
+        elements.push(part);
+      }
+    });
+
+    // Wrap string pieces in spans and keep elements as-is (elements already have keys for JSX nodes)
+    return elements.map((el, i) => (typeof el === "string" ? <span key={i}>{el}</span> : el));
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
 
@@ -158,7 +210,7 @@ export function Chatbot() {
                         : "bg-gray-200 text-gray-900 rounded-bl-none"
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <p className="text-sm whitespace-pre-wrap">{renderMessageContent(message.content)}</p>
                   </div>
                 </div>
               ))}
