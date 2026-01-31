@@ -1,6 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth } from "@clerk/nextjs/server";
-import { getBikesContext, getUserBookingsContext, generateSystemPrompt, formatBikesForContext } from "@/lib/chatbot-utils";
+import {
+  getBikesContext,
+  getUserBookingsContext,
+  generateSystemPrompt,
+  formatBikesForContext,
+} from "@/lib/chatbot-utils";
 
 export async function POST(request) {
   try {
@@ -134,16 +139,15 @@ export async function POST(request) {
 
       if (matchedBike) {
         const bikeLink = `/bikes/${matchedBike.id}`;
-        const bookingLink = `/test-drive/${matchedBike.id}`;
 
         if (/(book|test drive|test-drive)/.test(lastText)) {
-          appended = `\n\nYes! Test drives are available. Click below to select a date and time.\n🔗 Book Test Drive: ${bookingLink}\n🔗 View Bike Listing: ${bikeLink}`;
+          appended = `\n\nYes! Test drives are available for this bike. Please visit the bike listing to choose a date and time and complete booking:\n🔗 [View Bike Listing - ${matchedBike.make} ${matchedBike.model}](${bikeLink})`;
         } else if (/(i like|i love|like|love|what should i do|what should i|what now|next)/.test(lastText)) {
-          appended = `\n\nGreat choice! You can view full details and book a test drive here:\n🔗 View Bike Listing: ${bikeLink}\n🔗 Book Test Drive: ${bookingLink}`;
+          appended = `\n\nGreat choice! You can view full details and book a test drive here:\n🔗 [View Bike Listing - ${matchedBike.make} ${matchedBike.model}](${bikeLink})`;
         }
       } else {
         if (/(book|test drive|test-drive)/.test(lastText)) {
-          appended = `\n\nYes! Test drives are available. Tell me which bike you want to book for, or visit:\n🔗 Book Test Drive: /test-drive`;
+          appended = `\n\nYes! Test drives are available. Tell me which bike you want to book for, or browse listings to pick a bike:\n🔗 [Browse Bikes](/bikes)`;
         }
       }
 
