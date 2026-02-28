@@ -1,8 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth } from "@clerk/nextjs/server";
-<<<<<<< Updated upstream
-import { getBikesContext, getUserBookingsContext, generateSystemPrompt, formatBikesForContext } from "@/lib/chatbot-utils";
-=======
 import { db } from "@/lib/prisma";
 import {
   getBikesContext,
@@ -16,7 +13,6 @@ import {
   formatBrowseHistoryForContext,
   formatRecommendationsForContext,
 } from "@/lib/chatbot-utils";
->>>>>>> Stashed changes
 
 export async function POST(request) {
   try {
