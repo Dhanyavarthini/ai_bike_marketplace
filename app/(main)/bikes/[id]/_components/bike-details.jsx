@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@clerk/nextjs";
+import { useBikeViewTracking } from "@/hooks/use-bike-view-tracking";
 import { AlertCircle, Calendar } from "lucide-react";
 import {
   Bike,
@@ -36,6 +37,10 @@ import EmiCalculator from "./emi-calculator";
 export function BikeDetails({ bike, testDriveInfo }) {
   const router = useRouter();
   const { isSignedIn } = useAuth();
+  
+  // Track this bike view
+  useBikeViewTracking(bike.id);
+  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(bike.wishlisted);
 

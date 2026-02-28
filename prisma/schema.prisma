@@ -26,6 +26,7 @@ model User {
   role              UserRole            @default( USER )
   savedBikes        UserSavedBike[]
   testDrives        TestDriveBooking[]
+  browseHistory     BrowseHistory[]
 }
 
 enum UserRole {
@@ -50,6 +51,7 @@ model Bike {
   images              String[]                //Array of Supabase storage URLs
   savedBy             UserSavedBike[]
   testDriveBookings   TestDriveBooking[]
+  browseHistory       BrowseHistory[]
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
 
@@ -121,6 +123,21 @@ model UserSavedBike{
   @@unique([userId, bikeId])
   @@index([userId])
   @@index([bikeId])
+}
+
+model BrowseHistory{
+  id          String      @id @default(uuid())
+  userId      String      
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bikeId      String      
+  bike        Bike        @relation(fields: [bikeId], references: [id], onDelete: Cascade)
+  viewedAt    DateTime    @default(now())
+  timeSpent   Int         @default(0)  // Time spent in seconds
+
+
+  @@index([userId])
+  @@index([bikeId])
+  @@index([userId, viewedAt])
 }
 
 model TestDriveBooking{

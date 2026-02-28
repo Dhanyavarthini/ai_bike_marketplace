@@ -1,6 +1,22 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { auth } from "@clerk/nextjs/server";
+<<<<<<< Updated upstream
 import { getBikesContext, getUserBookingsContext, generateSystemPrompt, formatBikesForContext } from "@/lib/chatbot-utils";
+=======
+import { db } from "@/lib/prisma";
+import {
+  getBikesContext,
+  getUserBookingsContext,
+  generateSystemPrompt,
+  formatBikesForContext,
+  getUserSavedBikesContext,
+  getUserBrowseHistoryContext,
+  getPersonalizedBikesContext,
+  formatSavedBikesForContext,
+  formatBrowseHistoryForContext,
+  formatRecommendationsForContext,
+} from "@/lib/chatbot-utils";
+>>>>>>> Stashed changes
 
 export async function POST(request) {
   try {
@@ -15,9 +31,18 @@ export async function POST(request) {
 
     // Get user context
     let userId = null;
+    let clerkUserId = null;
     try {
       const session = await auth();
-      userId = session?.userId;
+      clerkUserId = session?.userId;
+      
+      // Get internal user ID from clerk ID
+      if (clerkUserId) {
+        const user = await db.user.findUnique({
+          where: { clerkUserId },
+        });
+        userId = user?.id;
+      }
     } catch (authError) {
       console.warn("Auth error (continuing without auth):", authError.message);
       // Continue without user context if auth fails
@@ -33,12 +58,35 @@ export async function POST(request) {
     }
 
     let userContext = null;
+    let savedBikesContext = null;
+    let browseHistoryContext = null;
+    let recommendationsContext = null;
+
     if (userId) {
       try {
         userContext = await getUserBookingsContext(userId);
       } catch (dbError) {
         console.warn("Error fetching user bookings:", dbError.message);
         // Continue without user context if database fails
+      }
+
+      // Fetch user preferences context
+      try {
+        savedBikesContext = await getUserSavedBikesContext(userId);
+      } catch (dbError) {
+        console.warn("Error fetching saved bikes context:", dbError.message);
+      }
+
+      try {
+        browseHistoryContext = await getUserBrowseHistoryContext(userId);
+      } catch (dbError) {
+        console.warn("Error fetching browse history context:", dbError.message);
+      }
+
+      try {
+        recommendationsContext = await getPersonalizedBikesContext(userId);
+      } catch (dbError) {
+        console.warn("Error fetching personalized recommendations:", dbError.message);
       }
     }
 
@@ -54,7 +102,7 @@ export async function POST(request) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-flash",
-      systemInstruction: generateSystemPrompt({ userId }),
+      systemInstruction: generateSystemPrompt({ userId, clerkUserId }),
     });
 
     // Format messages for Gemini
@@ -75,10 +123,35 @@ export async function POST(request) {
     // Get the last message from the user
     const lastMessage = chatHistory[chatHistory.length - 1];
 
-    // Build context for the request
+    // Build context for the request - combine all contexts
     let contextualMessage = lastMessage.parts[0].text;
+    
+    // Build comprehensive context string
+    const contextParts = [];
+
+    // Add saved bikes if user is logged in
+    if (savedBikesContext) {
+      contextParts.push(formatSavedBikesForContext(savedBikesContext));
+    }
+
+    // Add browse history
+    if (browseHistoryContext) {
+      contextParts.push(formatBrowseHistoryForContext(browseHistoryContext));
+    }
+
+    // Add recommendations
+    if (recommendationsContext) {
+      contextParts.push(formatRecommendationsForContext(recommendationsContext));
+    }
+
+    // Add available bikes
     if (bikesContext && bikesContext.length > 0) {
-      contextualMessage = `[Available Bikes]: ${formatBikesForContext(bikesContext)}\n\nUser Query: ${contextualMessage}`;
+      contextParts.push(formatBikesForContext(bikesContext));
+    }
+
+    // Combine all contexts
+    if (contextParts.length > 0) {
+      contextualMessage = `[USER PREFERENCES & CONTEXT]\n${contextParts.join("\n\n")}\n\nUser Query: ${contextualMessage}`;
     }
 
     // Create chat session with validated history
